@@ -8,7 +8,7 @@ namespace BetterConsoleCalculator;
 
 internal class Calculator
 {
-	private static readonly char[] operators = { '^', '*', '/', '+', '-' };
+	private static readonly char[] operators = {'/', '*', '+', '-'};
 
 	public static (bool isValid, string? errorMessage) IsValidCalculationString(string? calculation)
 	{
@@ -43,44 +43,12 @@ internal class Calculator
 	{
 		calculation = calculation.Replace(" ", "");
 
-		decimal result = 0m;
-
+		GetNumberOperatorPairsOrdered(ref calculation);
 
 		foreach (char c in operators)
 		{
 			CalculateSingleOperator(c, ref calculation);
 		}
-
-
-
-		//List<NumberOperatorPair> numberOperatorPairs = GetNumberOperatorPairsOrdered(ref calculation);
-
-		//result = FindNumberInString(calculation, 0).value;
-
-		//foreach (NumberOperatorPair numberOperatorPair in numberOperatorPairs)
-		//{
-		//	switch (numberOperatorPair.Operator)
-		//	{
-		//		case '+':
-		//			result += numberOperatorPair.Number;
-		//			break;
-		//		case '-':
-		//			result -= numberOperatorPair.Number;
-		//			break;
-		//		case '*':
-		//			result *= numberOperatorPair.Number;
-		//			break;
-		//		case '/':
-		//			result /= numberOperatorPair.Number;
-		//			break;
-		//		case '^':
-		//			result = (decimal)Math.Pow((double)result, (double)numberOperatorPair.Number);
-		//			break;
-		//		default:
-		//			throw new InvalidOperationException($"Invalid operator: {numberOperatorPair.Operator}");
-		//	}
-		//}
-
 
 		return decimal.Parse(calculation);
 	}
@@ -100,6 +68,10 @@ internal class Calculator
 				break;
 			}
 			index--;
+		}
+		if (index < 0)
+		{
+			index = 0;
 		}
 
 		return numberText != "" ? (decimal.Parse(numberText), index) : (0, 0);
@@ -121,68 +93,33 @@ internal class Calculator
 			}
 			index++;
 		}
+		
 
-		return numberText != "" ? (decimal.Parse(numberText), index) : (0, 0);
+		return numberText != "" ? (decimal.Parse(numberText), index - numberText.Length + 1) : (0, 0);
 	}
 
-	private List<NumberOperatorPair> GetNumberOperatorPairsOrdered(ref string calculation)
+	private void GetNumberOperatorPairsOrdered(ref string calculation)
 	{
-		List<NumberOperatorPair> numberOperatorPairs = new List<NumberOperatorPair>();
-
 		while (calculation.Contains('('))
 		{
 			int startIndex = calculation.IndexOf('(');
 			int subStringLength = calculation.IndexOf(')') - startIndex;
 			string substring = calculation.Substring(startIndex + 1, subStringLength - 1);
 
-			var subNumberOperatorPairs = GetNumberOperatorPairsOrdered(ref substring);
+			GetNumberOperatorPairsOrdered(ref substring);
 
-			decimal startValue = FindNumberInString(calculation, startIndex + 1).value;
+			foreach (char c in operators)
+			{
+				CalculateSingleOperator(c, ref substring);
+			}
+
 			calculation = calculation.Remove(startIndex, subStringLength + 1);
-			calculation = calculation.Insert(startIndex, CalculateNumberOperatorPairSum(subNumberOperatorPairs.ToArray(), startValue).ToString());
+
+			calculation = calculation.Insert(startIndex, substring);
 		}
-
-		for (int i = 1; i < calculation.Length; i++)
-		{
-			if (operators.Contains(calculation[i]))
-			{
-				NumberOperatorPair numberOperatorPair = new NumberOperatorPair()
-				{
-					Number = FindNumberInString(calculation, i + 1).value,
-					Operator = calculation[i]
-				};
-
-				numberOperatorPairs.Add(numberOperatorPair);
-			}
-		}
-
-		List<NumberOperatorPair> orderedNumberOperatorPairs = new();
-		foreach (var op in operators)
-		{
-			for (int i = 0; i < numberOperatorPairs.Count(); i++)
-			{
-				if (numberOperatorPairs[i].Operator == op)
-				{
-					orderedNumberOperatorPairs.Add(numberOperatorPairs[i]);
-				}
-			}
-		}
-
-		return orderedNumberOperatorPairs;
 	}
 
-	private decimal CalculateNumberOperatorPairSum(NumberOperatorPair[] numberOperatorPairs, decimal startValue)
-	{
-		decimal result = startValue;
-
-		foreach (NumberOperatorPair numberOperatorPair in numberOperatorPairs)
-		{
-
-		}
-
-		return result;
-
-	}
+	
 
 	private void CalculateSingleOperator(char operation, ref string calculation)
 	{
@@ -193,13 +130,29 @@ internal class Calculator
 			{
 				return;
 			}
-			var num1 = FindNumberInString(calculation, operatorIndex + 1);
-			var num2 = FindNumberInStringReverse(calculation, operatorIndex - 1);
-			num2.index = num2.index + operatorIndex - 1;
-			num1.index = num1.index + operatorIndex + 1;
 
-			calculation = calculation.Remove(num2.index, num1.index - num2.index);
-			calculation = calculation.Insert(num2.index, CalculateOperator(operation, num1.value, num2.value).ToString());
+			var rightNumber = FindNumberInString(calculation, operatorIndex + 1);
+			var leftNumber = FindNumberInStringReverse(calculation, operatorIndex - 1);
+			int length = rightNumber.index + rightNumber.value.ToString().Length - leftNumber.index;
+
+			if (length > calculation.Length)
+			{
+				length = calculation.Length;
+			}
+			while (true)
+			{
+				try
+				{
+					calculation = calculation.Remove(leftNumber.index, length);
+				}
+				catch (ArgumentOutOfRangeException)
+				{
+					length--;
+					continue;
+				}
+				break;
+			}
+			calculation = calculation.Insert(leftNumber.index, CalculateOperator(operation, rightNumber.value, leftNumber.value).ToString());
 
 		}
 	}
