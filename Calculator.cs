@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.AccessControl;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -26,9 +27,9 @@ internal class Calculator
 
 		foreach (char c in calculation)
 		{
-			bool isOperator = operators.Contains(c);
+			bool isOperator = operators.Contains(c) && c != '-';
 
-			if (!char.IsDigit(c) && (!charCanBeOperator && isOperator) && c != '(' && c != ')' && c != ',' && c != '.' && operators.Contains(c) && c != ' ')
+			if ((!char.IsDigit(c)) && (!charCanBeOperator && isOperator) && c != '(' && c != ')' && c != ',' && c != '.' && c != ' ')
 			{
 				return (false, $"Invalid character: '{c}'");
 			}
@@ -58,7 +59,7 @@ internal class Calculator
 		string numberText = "";
 		while (index >= 0)
 		{
-			if (int.TryParse(calculation[index].ToString(), out int _) || calculation[index] == ',' || calculation[index] == '.')
+			if (int.TryParse(calculation[index].ToString(), out int _) || calculation[index] == ',' || calculation[index] == '.' || calculation[index] == '-')
 			{
 				numberText = calculation[index] + numberText;
 			}
@@ -82,7 +83,7 @@ internal class Calculator
 		string numberText = "";
 		while (index < calculation.Length)
 		{
-			if (int.TryParse(calculation[index].ToString(), out int _) || calculation[index] == ',' || calculation[index] == '.')
+			if (int.TryParse(calculation[index].ToString(), out int _) || calculation[index] == ',' || calculation[index] == '.' || calculation[index] == '-')
 			{
 				numberText += calculation[index];
 			}
@@ -119,14 +120,12 @@ internal class Calculator
 		}
 	}
 
-	
-
 	private void CalculateSingleOperator(char operation, ref string calculation)
 	{
 		while (true)
 		{
 			int operatorIndex = calculation.IndexOf(operation);
-			if (operatorIndex == -1)
+			if (operatorIndex == -1 || operatorIndex == 0)
 			{
 				return;
 			}
@@ -152,6 +151,7 @@ internal class Calculator
 				}
 				break;
 			}
+
 			calculation = calculation.Insert(leftNumber.index, CalculateOperator(operation, rightNumber.value, leftNumber.value).ToString());
 
 		}
